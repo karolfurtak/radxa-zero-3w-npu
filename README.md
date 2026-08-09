@@ -21,6 +21,14 @@ lesson learned the same way on a companion project,
 where the value turned out to be the documented workarounds, not the build
 script itself.
 
+> **If you're converting an embedding model to int8 on this NPU: read
+> [`docs/quantization-warning.md`](docs/quantization-warning.md) first.**
+> The default calibration workflow produced a model that ran without a
+> single error or warning while returning retrieval results close to
+> random (recall@3 = 0.062 vs. 0.994 for the same model at fp16) — the kind
+> of failure that is invisible until a human checks the actual search
+> results.
+
 ## The board and the unit
 
 | Item | Value |
@@ -57,8 +65,8 @@ attempt 2 and written up — as a hypothesis, not a result — in
 | Attempt | Status | Details |
 |---|---|---|
 | NPU present and idle, baseline recorded | Done | [`docs/log.md`](docs/log.md) |
-| Semantic search on the NPU | Partially worked — fast but the int8 quantization is currently unusable for retrieval quality; fp16 works | [`docs/log.md`](docs/log.md) |
-| CPU vs. NPU vs. CPU+NPU hybrid, benchmarked | Done — hybrid does **not** deliver additive throughput as implemented | [`docs/log.md`](docs/log.md) |
+| Semantic search on the NPU | Done — fp16 is fast (3.85x CPU-fp32) and correct; int8 is faster but unusable (recall@3 = 0.062) | [`docs/log.md`](docs/log.md), [`docs/quantization-warning.md`](docs/quantization-warning.md) |
+| CPU fp32 vs. CPU int8 vs. NPU fp16 vs. NPU int8 vs. hybrid, benchmarked | Done — hybrid does **not** deliver additive throughput as implemented | [`docs/log.md`](docs/log.md) |
 | TTS synthesis on the NPU | Not started | [`docs/hybrid-mode-plan.md`](docs/hybrid-mode-plan.md) |
 
 The first real benchmark run on hardware also caught a second measurement
@@ -69,8 +77,8 @@ was a real risk to an unrelated always-on service on the same board. Both
 are now fixed as standing methodology (idle-gating before every
 configuration, a memory guard, fixed-rate time-series sampling) — see the
 2026-08-10 entry in [`docs/log.md`](docs/log.md) for the fix and the
-corrected numbers, and the three temperature/clock/memory time-series charts
-in [`charts/`](charts/).
+corrected numbers, and the temperature/clock/memory time-series charts (one
+per configuration) in [`charts/`](charts/).
 
 [`docs/methodology.md`](docs/methodology.md) documents a third measurement
 mistake, caught earliest of the three, before collecting a single real
@@ -84,19 +92,20 @@ mandatory reading before trusting any number in this repository.
 
 ```text
 docs/
-  hardware-map.md      SoC, memory, storage, cooling, I/O, vendor links
-  methodology.md        what to measure and how to avoid biasing it
-  log.md                 attempt-by-attempt journal (result + numbers + conclusion)
-  hybrid-mode-plan.md   NPU+CPU split plan, marked explicitly as unverified
+  hardware-map.md            SoC, memory, storage, cooling, I/O, vendor links
+  methodology.md              what to measure and how to avoid biasing it
+  log.md                       attempt-by-attempt journal (result + numbers + conclusion)
+  hybrid-mode-plan.md         NPU+CPU split plan, marked explicitly as unverified
+  quantization-warning.md    int8 on this NPU can silently wreck retrieval quality -- read before you ship int8
 conversion/
   convert_to_rknn.py                     ONNX -> RKNN int8, reproduces the semantic-search model
   convert_to_rknn_fp16_diagnostic.py     same, quantization OFF -- the diagnostic that isolated the int8 quality bug
 bench/
-  bench_safe.py         three-way CPU / NPU / hybrid benchmark: idle-gating, memory guard, time-series capture
+  bench_safe.py         CPU fp32 / CPU int8 / NPU fp16 / NPU int8 / hybrid benchmark: idle-gating, memory guard, time-series capture
   quality_diag.py        int8-vs-fp16 recall@k diagnostic (isolates quantization vs. conversion bugs)
 charts/
-  gen_temp_wykresy.py    generates the three time-series charts below from bench_safe.py output
-  temp_wykres_*.png      temperature / clock / memory-in-use vs. time, one per configuration
+  gen_temp_wykresy.py    generates the time-series charts below from bench_safe.py output
+  temp_wykres_*.png      temperature / clock / memory-in-use vs. time, one per configuration (4 configurations)
 model-attribution.md    source model, license, and what this repo adds (see below)
 ```
 
@@ -149,19 +158,31 @@ płytki — stąd wartość mają też próby nieudane.
 
 **Wyszukiwanie znaczeniowe (model `paraphrase-multilingual-MiniLM-L12-v2`,
 118 mln parametrów, licencja Apache-2.0, polski i angielski) — zmierzone
-trzy warianty:** sam procesor, sama jednostka, oba równolegle (podział zdań
-nieparzyste/parzyste). Sama jednostka wygrywa z dużym zapasem na czasie
-(17,5 zdania/s vs 3,25 dla procesora) i jako jedyna nie throttluje wcale —
-ale jej domyślna kwantyzacja int8 psuje jakość wyszukiwania niemal do
-poziomu losowego (recall@3 = 0,062 względem pełnej precyzji), podczas gdy
-ten sam model bez kwantyzacji (fp16) na tej samej jednostce daje recall@3 =
-0,994. **Wniosek: to wina kalibracji kwantyzacji, nie błąd konwersji — do
-wyszukiwania używać wariantu fp16, nie int8.** Praca równoległa (procesor +
-jednostka) **nie sumuje się** — złożone obciążenie wyszło wolniejsze niż
-sam procesor osobno, prawdopodobnie przez rywalizację obu procesów o
-zasoby przy jednoczesnym ładowaniu modeli na słabym, czterordzeniowym
-układzie. Pełne liczby, trzy wykresy temperatura/takt/pamięć w funkcji
-czasu i uzasadnienie: `docs/log.md`, wpis 2026-08-10.
+cztery warianty:** procesor pełną precyzją (fp32, punkt odniesienia jakości),
+procesor int8, jednostka fp16, jednostka int8, plus procesor i jednostka
+równolegle (podział zdań nieparzyste/parzyste). **Pierwszy pomiar porównał
+prędkość jednostki w wariancie int8 z procesorem fp32 — porównanie
+nieuczciwe, bo int8 na jednostce okazał się bezużyteczny jakościowo**
+(recall@3 = 0,062 względem pełnej precyzji — poziom bliski losowemu),
+podczas gdy ten sam model bez kwantyzacji (fp16) na tej samej jednostce
+daje recall@3 = 0,994. **Wniosek diagnostyczny: to wina kalibracji
+kwantyzacji (`rknn-toolkit2`, schemat w8a8), nie błąd konwersji** — pełne
+uzasadnienie i ostrzeżenie dla innych: `docs/quantization-warning.md`.
+
+**Uczciwe porównanie (warianty o zachowanej jakości):** jednostka fp16 —
+77,2 ms/zdanie, 12,17 zdania/s — jest **3,85× szybsza niż procesor fp32**
+i wciąż **1,34× szybsza niż procesor int8** (recall@3 = 0,871), mimo
+dwukrotnie większej precyzji per liczba niż int8. Szczyt temperatury dla
+jednostki fp16: 73,9°C (procesor fp32 dochodzi do progu throttlingu 85°C).
+**Jednostka nadal wygrywa — ale mniej efektownie, niż sugerował pierwszy,
+nieuczciwy pomiar.**
+
+Praca równoległa (procesor + jednostka) **nie sumuje się** — złożone
+obciążenie wyszło wolniejsze niż sam procesor int8 osobno, prawdopodobnie
+przez rywalizację obu procesów o zasoby przy jednoczesnym ładowaniu modeli
+na słabym, czterordzeniowym układzie. Pełne liczby, cztery wykresy
+temperatura/takt/pamięć w funkcji czasu i uzasadnienie: `docs/log.md`,
+wpisy 2026-08-10 (główny i uzupełnienie).
 
 Po drodze wyłapano i opisano dwa błędy pomiarowe: (1) odczyt obciążenia
 procesora przez to samo połączenie SSH, którym steruje się testem, zawyża

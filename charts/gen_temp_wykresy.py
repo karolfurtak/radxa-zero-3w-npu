@@ -13,13 +13,10 @@ stackowane zachowuja czytelnosc KAZDEJ wielkosci osobno, a wspolna os X wciaz po
 odczytac wprost, ze wzrost temperatury (panel 1) pokrywa sie w czasie ze spadkiem taktu
 (panel 2) i ze wzrostem zajetosci pamieci (panel 3).
 
-Uzywa fundamentu rysunek_techniczny.py z prywatnego skilla "wykresy-techniczne" (czern
-na bieli, czcionka FL Pismo Techniczne, przecinek dziesietny, anty-tofu) -- ten plik
-NIE jest publikowany w tym repo (prywatne narzedzie autora), wiec bez niego skrypt
-spada na zwykly matplotlib z tym samym ukladem danych/paneli, tylko bez firmowego stylu
-kropka-w-kropke. Kazdy test w tym repo startuje z potwierdzonego stanu spoczynkowego
-(temp <= 67 stC, takt 408 MHz, obciazenie < 0,5) -- temperatura startowa kazdego
-wykresu jest wiec porownywalna miedzy wariantami.
+Uzywa fundamentu rysunek_techniczny.py (skill wykresy-techniczne): czern na bieli,
+FL Pismo Techniczne, przecinek dziesietny, anty-tofu. Kazdy test w tym repo startuje
+z potwierdzonego stanu spoczynkowego (temp <= 67 stC, takt 408 MHz, obciazenie < 0,5)
+-- temperatura startowa kazdego wykresu jest wiec porownywalna miedzy wariantami.
 
 Uruchomienie:
     python gen_temp_wykresy.py <katalog_z_danymi> <katalog_wyjsciowy>
@@ -30,28 +27,12 @@ from pathlib import Path
 
 FUNDAMENT_SCIEZKA = r"C:\Users\karol\Documents\Jarwis\Jarwis\.claude\skills\wykresy-techniczne\scripts"
 sys.path.insert(0, FUNDAMENT_SCIEZKA)
-try:
-    from rysunek_techniczny import plt, kategoria_obrazu, legenda, zapisz  # noqa: E402
-    # fundament szuka czcionki pod sciezka linuksowa -- na Windows jest zarejestrowana
-    # systemowo pod ta sama nazwa, wiec wystarczy nadpisac font.family jawnie
-    plt.rcParams['font.family'] = 'FL Pismo Techniczne'
-except ImportError:
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt  # noqa: E402
-
-    def kategoria_obrazu(_):
-        pass
-
-    def legenda(ax, **kw):
-        ax.legend(**kw)
-
-    def zapisz(fig, path):
-        fig.savefig(path, facecolor='white', bbox_inches='tight')
-        plt.close(fig)
-        print(f'OK: {path}')
-
+from rysunek_techniczny import plt, kategoria_obrazu, legenda, zapisz  # noqa: E402
 from matplotlib.ticker import FuncFormatter  # noqa: E402
+
+# fundament szuka czcionki pod sciezka linuksowa -- na Windows jest zarejestrowana
+# systemowo pod ta sama nazwa, wiec wystarczy nadpisac font.family jawnie
+plt.rcParams['font.family'] = 'FL Pismo Techniczne'
 
 PROG_THROTTLE_C = 85.0
 TAKT_PELNY_KHZ = 1800000
@@ -60,7 +41,8 @@ TAKT_PELNY_MHZ = TAKT_PELNY_KHZ / 1000.0
 WARIANTY = [
     ("cpu_fp32", "Sam procesor (CPU, fp32)"),
     ("hybrid", "Procesor + jednostka rownolegle (CPU int8 + NPU int8)"),
-    ("npu_int8", "Sama jednostka (NPU, int8)"),
+    ("npu_int8", "Sama jednostka (NPU, int8) - NIENADAJACA SIE DO UZYTKU, recall@3=0,06"),
+    ("npu_fp16", "Sama jednostka (NPU, fp16) - jedyny wariant jednostki o zachowanej jakosci"),
 ]
 
 

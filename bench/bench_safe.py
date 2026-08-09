@@ -38,6 +38,7 @@ TOKENIZER_PATH = str(BASE / "tokenizer.json")
 ONNX_FP32 = str(BASE / "model.onnx")
 ONNX_INT8 = str(BASE / "model_int8.onnx")
 RKNN_PATH = str(BASE / "model_int8_rk3566.rknn")
+RKNN_FP16_PATH = str(BASE / "model_fp16_rk3566.rknn")
 SAMPLE_PATH = BASE / "sample_600.jsonl"
 OUT_PATH = BASE / "wyniki_bench_safe.json"
 
@@ -395,6 +396,8 @@ def ocena_jakosci(emb_ref: list, emb_test: list, k: int = 3) -> dict:
 
 
 if __name__ == "__main__":
+    import sys
+
     self_deprioritize()
     wyniki = {"uwaga_metodologiczna": (
         "Poprzedni bieg (wyniki_bench.json) uniewazniony: cztery warianty bez wychlodzenia "
@@ -403,18 +406,25 @@ if __name__ == "__main__":
         f"(temp <= {IDLE_TEMP_C} stC, takt = {IDLE_FREQ_KHZ/1000:.0f} MHz -- dolny/iddle, nie gorny "
         f"aktywny -- obciazenie < {IDLE_LOAD1_MAX}), straz pamieci (próg {MIN_AVAILABLE_MB} MB), "
         f"niski priorytet (nice 15, oom_score_adj 500), N={N_PER_VARIANT}, szereg czasowy "
-        f"temperatura+takt co {TEMP_SAMPLE_INTERVAL_S:.0f} s zapisany osobno per wariant "
+        f"temperatura+takt+pamiec co {TEMP_SAMPLE_INTERVAL_S:.0f} s zapisany osobno per wariant "
         "(temp_szereg_<wariant>.json) do wykresu temperatura(czas)."
     )}
     sentences = ALL_SENTENCES[:N_PER_VARIANT]
 
     tok_dummy = Tokenizer.from_file(TOKENIZER_PATH)
 
-    plan = [
+    plan_all = [
         ("cpu_fp32", lambda s: run_cpu(ONNX_FP32, s, "cpu_fp32")),
         ("cpu_int8", lambda s: run_cpu(ONNX_INT8, s, "cpu_int8")),
         ("npu_int8", lambda s: run_npu(s, RKNN_PATH, "npu_int8")),
+        ("npu_fp16", lambda s: run_npu(s, RKNN_FP16_PATH, "npu_fp16")),
     ]
+    # CLI filter: `python bench_safe.py npu_fp16` runs only that variant (skips hybrid
+    # too) -- used to add the fp16 NPU variant without re-running the whole, already-good
+    # sweep and re-exposing the board to more thermal cycles than necessary.
+    wybrane = set(sys.argv[1:]) or None
+    plan = [p for p in plan_all if wybrane is None or p[0] in wybrane]
+    robic_hybrid = wybrane is None
 
     embeddingi_by_wariant = {}
     for nazwa, fn in plan:
@@ -434,15 +444,16 @@ if __name__ == "__main__":
         gc.collect()
 
     # hybrid: needs its own memory guard + idle wait, both sub-models loaded at once
-    guard = check_memory_guard("hybrid")
-    wyniki["straz_pamieci"].append(guard)
-    if guard["ok"]:
-        idle = wait_for_idle()
-        wyniki.setdefault("oczekiwanie_na_iddle", []).append({"hybrid": idle})
-        print(f"== hybrid == (start: {idle.get('temp_c')} stC, {idle.get('freq_khz')} kHz)", flush=True)
-        wyniki["hybrid"] = run_hybrid(sentences)
-    else:
-        wyniki["hybrid"] = {"pominieto": True, "powod": "mem_available ponizej progu", **guard}
+    if robic_hybrid:
+        guard = check_memory_guard("hybrid")
+        wyniki["straz_pamieci"].append(guard)
+        if guard["ok"]:
+            idle = wait_for_idle()
+            wyniki.setdefault("oczekiwanie_na_iddle", []).append({"hybrid": idle})
+            print(f"== hybrid == (start: {idle.get('temp_c')} stC, {idle.get('freq_khz')} kHz)", flush=True)
+            wyniki["hybrid"] = run_hybrid(sentences)
+        else:
+            wyniki["hybrid"] = {"pominieto": True, "powod": "mem_available ponizej progu", **guard}
 
     if "cpu_fp32" in embeddingi_by_wariant:
         ref = embeddingi_by_wariant["cpu_fp32"]
@@ -450,5 +461,6 @@ if __name__ == "__main__":
             if wariant in embeddingi_by_wariant:
                 wyniki[f"jakosc_{wariant}_vs_fp32"] = ocena_jakosci(ref, embeddingi_by_wariant[wariant], k=3)
 
-    OUT_PATH.write_text(json.dumps(wyniki, indent=2, ensure_ascii=False))
-    print(f"ZAPISANO: {OUT_PATH}")
+    out_path = OUT_PATH if wybrane is None else BASE / f"wyniki_bench_safe_{'_'.join(sorted(wybrane))}.json"
+    out_path.write_text(json.dumps(wyniki, indent=2, ensure_ascii=False))
+    print(f"ZAPISANO: {out_path}")

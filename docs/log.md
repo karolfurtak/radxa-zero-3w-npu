@@ -163,3 +163,58 @@ as the next thing to try before writing off the hybrid approach entirely.
    problem.
 
 Reproduction: [`bench/bench_safe.py`](../bench/bench_safe.py) (three-way benchmark, idle-gating, memory guard, time-series capture) and [`bench/quality_diag.py`](../bench/quality_diag.py) (the int8-vs-fp16 recall diagnostic). Raw `wyniki_bench_safe.json` is generated fresh per run, not committed -- see [`methodology.md`](methodology.md).
+
+---
+
+## 2026-08-10 (addendum) — The missing comparison: NPU fp16, the only quality-usable NPU configuration
+
+**Why this entry exists.** The 2026-08-10 entry above benchmarked NPU-only using the
+int8 RKNN export -- the fast one, and the one later shown (same entry) to have
+recall@3 = 0.062, near-random. That is not a configuration anyone should ship. Comparing
+its speed against CPU-fp32 and calling it a win was comparing a fast, broken
+configuration against a slow, correct one -- not a fair test of "does the NPU actually
+help." The missing number was **NPU running fp16** (quantization off, recall@3 = 0.994,
+the only NPU configuration confirmed to preserve quality) benchmarked with the exact
+same rigor as everything else: idle-gated start, memory guard, 1 Hz temperature/clock/
+memory time series. That run is below, and the table from the earlier entry is repeated
+here in a form that actually answers the question the whole exercise was for.
+
+**Numbers** (150 sentences, same corpus sample as the earlier entry; NPU fp16 started
+from 70.6 °C after a 3 s idle wait):
+
+| | CPU fp32 (quality reference) | CPU int8 (recall@3 = 0.871) | NPU fp16 (recall@3 = 0.994) | NPU int8 -- NOT USABLE (recall@3 = 0.062) |
+|---|---|---|---|---|
+| Per-sentence, median | 297 ms | 106 ms | 77.2 ms | 53.6 ms |
+| Whole-library extrapolation (163,607 sentences) | ~14.0 h | ~5.0 h | ~3.7 h | ~2.6 h |
+| Throughput | 3.25 sentences/s | 9.08 sentences/s | 12.17 sentences/s | 17.52 sentences/s |
+| Start -> peak temp | 71.1 -> 85.0 °C | 72.2 -> 83.9 °C | 70.6 -> 73.9 °C | 72.2 -> 74.4 °C |
+| Clock behavior | Throttled 1800 -> 1104 MHz within ~10 s | Throttled 1800 -> 1416 MHz | Flat 1800 MHz on the 1 Hz chart; a single sub-second dip to 816 MHz was caught only by the finer per-sentence sampling -- not sustained throttling, no thermal cause (peak temp stayed 11 °C below the 85 °C ceiling) | Flat 1800 MHz, zero throttling, entire run |
+| Memory in use | ~1,290-1,299 MB | ~750 MB after load | ~1,077 MB after load | ~1,161 MB (flat) |
+
+Chart: [`charts/temp_wykres_npu_fp16.png`](../charts/temp_wykres_npu_fp16.png).
+
+**The answer to "does the unit still win once quality is comparable": yes, but by less
+than the int8 number suggested.** NPU-fp16 is **3.85x faster than CPU-fp32** (the
+correct baseline-to-baseline comparison: both preserve quality) and still **1.34x
+faster than CPU-int8** despite carrying twice the per-weight precision of int8. It also
+runs 11 °C cooler at peak than CPU-fp32 and never comes close to the 85 °C throttle
+ceiling. The int8 NPU number in the entry above (17.5 sentences/s) was real, but it was
+never a usable result -- it was a measurement of how fast this board can compute
+something close to noise.
+
+**Conclusion, restated with the fair comparison:**
+
+1. **Use NPU-fp16 for semantic search on this board.** It is the fastest
+   *quality-preserving* configuration measured, and the only NPU configuration that is
+   both fast and correct.
+2. **CPU-int8 remains a reasonable fallback** where the NPU toolchain is unavailable or
+   unwanted -- 2.9x faster than CPU-fp32, quality intact, no RKNN dependency.
+3. **Never quote the NPU-int8 throughput figure as a capability of this board without
+   the recall@3 = 0.062 figure next to it.** See
+   [`docs/quantization-warning.md`](quantization-warning.md) for why, and for the
+   diagnosis, in one place, so nobody has to reconstruct it from two log entries.
+
+Reproduction: same scripts as the entry above
+([`bench/bench_safe.py`](../bench/bench_safe.py) -- run
+`python bench_safe.py npu_fp16` to reproduce only this configuration without re-running
+the full sweep).
