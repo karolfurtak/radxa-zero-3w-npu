@@ -1,0 +1,13 @@
+{
+  // Long, information-dense lines (parameter tables, cited measurements)
+  // are the house style here; wrapping at an arbitrary column would hurt
+  // readability more than it helps.
+  "MD013": false,
+  // Inline HTML is not used in this repo, but keep the default off-switch
+  // explicit rather than implicit.
+  "MD033": false,
+  // Table pipe-spacing style ("compact" vs "padded") — our tables are
+  // consistently padded already and render correctly on GitHub; this rule
+  // is newer than the house style it would enforce here.
+  "MD060": false
+}
