@@ -4,6 +4,18 @@
 > benchmarked on hardware yet. Numbers below are a back-of-envelope estimate
 > meant to decide whether building this is worth the effort — treat them as
 > a target to verify, not a finding to cite.
+>
+> **Related result, worth reading before building this.** A structurally
+> similar NPU+CPU sentence split was benchmarked for the *other* attempt in
+> this repo (semantic search, not TTS) — see the 2026-08-10 entry in
+> [`log.md`](log.md). Result there: **the two-process, cold-start-each-time
+> design did not deliver additive throughput** — combined throughput came in
+> *below* the CPU-only baseline, dominated by both processes loading their
+> models concurrently on a resource-constrained quad-core board. That does
+> not automatically doom this TTS plan (different models, different
+> resource profile), but it is a concrete reason not to assume the split
+> "just works" here either — benchmark the actual model-loading + steady-
+> state split before trusting the back-of-envelope math below.
 
 ## Motivation
 
