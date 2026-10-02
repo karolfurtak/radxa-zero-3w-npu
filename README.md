@@ -131,12 +131,7 @@ one just to have a green badge would be a fake signal, not a real one.
 
 ## License
 
-[MIT](LICENSE) — matches the sibling
-[calculix-arm64-debian-build](https://github.com/karolfurtak/calculix-arm64-debian-build)
-repository, keeping any future scripts or code snippets here maximally
-reusable without license friction. Documentation and prose are covered under
-the same terms for simplicity, at the minor cost of MIT being an
-unconventional choice for pure text.
+Copyright (c) 2026 Karol Furtak. **All rights reserved.** Commercial use, copying, distribution and modification only with the author's written permission — see [LICENSE](LICENSE). Viewing the code on GitHub does not grant a licence.
 
 ## Contributing
 

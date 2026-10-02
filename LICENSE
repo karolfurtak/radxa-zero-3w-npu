@@ -1,21 +1,25 @@
-MIT License
+Copyright (c) 2026 Karol Furtak. Wszelkie prawa zastrzeżone. / All rights reserved.
 
-Copyright (c) 2026 Karol Furtak
+PL
+Oprogramowanie radxa-zero-3w-npu (kod źródłowy, dokumentacja i pliki towarzyszące) jest
+chronione prawem autorskim. Udostępnienie kodu do wglądu w serwisie GitHub NIE
+oznacza udzielenia licencji. Bez uprzedniej, pisemnej zgody autora zabrania się:
+  - wykorzystania komercyjnego w jakiejkolwiek formie (sprzedaż, usługi, wbudowanie
+    w produkt lub usługę odpłatną, użycie w działalności gospodarczej),
+  - kopiowania, rozpowszechniania i udostępniania,
+  - modyfikowania i tworzenia utworów zależnych.
+Zgoda na jakiekolwiek użycie: kontakt z autorem przez profil GitHub karolfurtak.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+EN
+radxa-zero-3w-npu (source code, documentation and accompanying files) is protected by
+copyright. Making the code viewable on GitHub does NOT grant any licence. Without
+the author's prior written permission you may not:
+  - use it commercially in any form (selling, services, embedding in a paid product
+    or service, use in business activity),
+  - copy, distribute or share it,
+  - modify it or create derivative works.
+For any permission contact the author via the GitHub profile karolfurtak.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Elementy stron trzecich / Third-party elements
+Model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 — Apache License 2.0; NIE jest częścią repozytorium (plik .rknn nie jest w nim zapisany), źródło i licencja: model-attribution.md. Model nie jest objęty niniejszą licencją.
+The model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 is under the Apache License 2.0; it is NOT part of this repository (the .rknn file is not committed). Source and licence: model-attribution.md. The model is not covered by this licence.
