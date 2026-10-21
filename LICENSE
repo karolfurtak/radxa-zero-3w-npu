@@ -9,6 +9,8 @@ oznacza udzielenia licencji. Bez uprzedniej, pisemnej zgody autora zabrania się
   - kopiowania, rozpowszechniania i udostępniania,
   - modyfikowania i tworzenia utworów zależnych.
 Zgoda na jakiekolwiek użycie: kontakt z autorem przez profil GitHub karolfurtak.
+Ograniczenia te nie dotyczą właściciela praw autorskich (Karol Furtak), który
+zachowuje pełne i nieograniczone prawo do korzystania z kodu, w tym komercyjnego.
 
 EN
 radxa-zero-3w-npu (source code, documentation and accompanying files) is protected by
@@ -23,3 +25,5 @@ For any permission contact the author via the GitHub profile karolfurtak.
 Elementy stron trzecich / Third-party elements
 Model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 — Apache License 2.0; NIE jest częścią repozytorium (plik .rknn nie jest w nim zapisany), źródło i licencja: model-attribution.md. Model nie jest objęty niniejszą licencją.
 The model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 is under the Apache License 2.0; it is NOT part of this repository (the .rknn file is not committed). Source and licence: model-attribution.md. The model is not covered by this licence.
+These restrictions do not apply to the copyright holder (Karol Furtak), who
+retains full and unrestricted rights to use the code, including commercially.
